@@ -1,5 +1,6 @@
 (ns stateful-check.command-utils
   (:require [stateful-check.generator-utils :refer [to-generator]]
+            [stateful-check.symbolic-values :refer [->RootVar]]
             [clojure.test.check.generators :as gen]
             [clojure.walk :as walk]))
 
@@ -47,6 +48,21 @@
   (if-let [real-command (:real/command command)]
     (apply real-command args)
     (throw (AssertionError. (str "No :real/command function found for " (:name command) " command")))))
+
+(defn real-make-initial-state-and-results
+  "Blah blah blah"
+  [spec]
+  (let [state-fn (or (:real/initial-state spec)
+                     (:initial-state spec)
+                     (constantly nil))
+        setup-fn (:real/setup spec)
+        setup-value (if setup-fn (setup-fn))
+        results (if setup-fn
+                  {(->RootVar "setup") setup-value})]
+    [(if setup-fn
+        (state-fn setup-value)
+        (state-fn))
+     results]))
 
 (defn model-make-next-state
   "Make the next state for a command, taking into account whether or

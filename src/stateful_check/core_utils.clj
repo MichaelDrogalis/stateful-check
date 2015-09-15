@@ -132,8 +132,9 @@
    (for-all [commands (generate-valid-commands spec)]
      (loop [tries (or tries 1)]
        (if (pos? tries)
-         (let [results (r/run-commands spec commands)]
-           (if (r/passed? results)
+         (let [state-stuff (u/real-make-initial-state-and-results spec)
+               results (r/run-commands spec state-stuff commands)]
+           (if (r/passed? spec state-stuff results)
              (recur (dec tries))
              (throw (make-failure-exception results))))
          true)))))
@@ -155,13 +156,12 @@
        ;; will see
        (case type
          :postcondition-check
-         (let [[_ _ cmd _ _ _ _ _ str-result] step]
+         (let [[_ cmd _ _ _ str-result] step]
            (println "  " (format-command cmd) "\t=>" str-result))
          :fail
-         (let [[_ _ _ ex] step
-               [pre-type _ cmd] pre
+         (let [[_ ex] step
+               [pre-type cmd] pre
                location (case pre-type
-                          :precondition-check "checking precondition"
                           :run-command "executing command"
                           :postcondition-check "checking postcondition"
                           :next-state "making next state"
@@ -189,6 +189,7 @@
   live system."
   [spec results {:keys [first-case? stacktraces?]}]
   (when-not (true? (:result results))
+    (println (-> results :result ex-data :results))
     (when first-case?
       (println "First failing test case:")
       (print-command-results (-> results :result ex-data :results) stacktraces?)

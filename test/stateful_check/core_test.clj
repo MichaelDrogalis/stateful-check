@@ -75,15 +75,17 @@
   [(gen/elements (map first state))
    gen/int])
 (defn set-update-op [action]
-  {:model/requires (fn [state]
-                     (seq state))
-   :model/args set-and-item
-   :next-state (fn [state [set item] _]
-                 (alist-update state set action item))
-   :real/postcondition (fn [state _ [set item] result]
-                         (= result
-                            (not= (alist-get state set)
-                                  (action (alist-get state set) item))))})
+  (let [action (fn [s & args]
+                 (apply action (set s) args))]
+    {:model/requires (fn [state]
+                       (seq state))
+     :model/args set-and-item
+     :next-state (fn [state [set item] _]
+                   (alist-update state set action item))
+     :real/postcondition (fn [state _ [set item] result]
+                           (= result
+                              (not= (alist-get state set)
+                                    (action (alist-get state set) item))))}))
 
 (def add-set-command
   (merge (set-update-op conj)

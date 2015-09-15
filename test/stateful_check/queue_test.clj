@@ -56,7 +56,7 @@
 (def count-queue-command
   {:model/args (fn [state] [(:queue state)])
    :real/command #'count-queue
-   :real/postcondition (fn [state _ _ val]
+   :real/postcondition (fn [state s _ val]
                          (= val (count (:elements state))))})
 
 ;;
@@ -67,8 +67,8 @@
 
 (def queue-specification
   {:commands {:push #'push-queue-command
-              :peek #'peek-queue-command
-              :pop #'pop-queue-command
+              ;; :peek #'peek-queue-command
+              ;; :pop #'pop-queue-command
               :count #'count-queue-command}
    :initial-state (fn [queue]
                     {:queue queue,
