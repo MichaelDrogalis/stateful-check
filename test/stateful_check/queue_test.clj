@@ -31,7 +31,7 @@
 
 (def push-queue-command
   {:model/args (fn [state] [(:queue state) gen/nat])
-   :real/command #'push-queue
+   :command #'push-queue
    :next-state (fn [state [_ val] _]
                  (update-in state [:elements] conj val))
    :real/postcondition (fn [_ _ _ result]
@@ -40,14 +40,14 @@
 (def peek-queue-command
   {:model/args (fn [state] [(:queue state)])
    :model/precondition (fn [state _] (seq (:elements state)))
-   :real/command #'peek-queue
+   :command #'peek-queue
    :real/postcondition (fn [state _ args val]
                          (= val (first (:elements state))))})
 
 (def pop-queue-command
   {:model/requires (fn [state] (seq (:elements state)))
    :model/args (fn [state] [(:queue state)])
-   :real/command #'pop-queue
+   :command #'pop-queue
    :next-state (fn [state _ _]
                  (update-in state [:elements] (comp vec next)))
    :real/postcondition (fn [state _ args val]
@@ -55,7 +55,7 @@
 
 (def count-queue-command
   {:model/args (fn [state] [(:queue state)])
-   :real/command #'count-queue
+   :command #'count-queue
    :real/postcondition (fn [state s _ val]
                          (= val (count (:elements state))))})
 
@@ -73,11 +73,11 @@
    :initial-state (fn [queue]
                     {:queue queue,
                      :elements []})
-   :real/setup (fn []
-                 (swap! queues-in-use inc)
-                 (new-queue))
-   :real/cleanup (fn [state]
-                   (swap! queues-in-use dec))})
+   :setup (fn []
+            (swap! queues-in-use inc)
+            (new-queue))
+   :cleanup (fn [state]
+              (swap! queues-in-use dec))})
 
 (def failing-queue-specification
   {:commands {:push #'push-queue-command
@@ -85,13 +85,13 @@
               :pop #'pop-queue-command
               :count #'count-queue-command}
    :initial-state (fn [queue] {:queue queue, :elements []})
-   :real/setup (fn []
-                 (swap! queues-in-use inc)
-                 (let [q (new-queue)]
-                   (push-queue q 1)
-                   q))
-   :real/cleanup (fn [state]
-                   (swap! queues-in-use dec))})
+   :setup (fn []
+            (swap! queues-in-use inc)
+            (let [q (new-queue)]
+              (push-queue q 1)
+              q))
+   :cleanup (fn [state]
+              (swap! queues-in-use dec))})
 
 (deftest queue-test
   (let [val @queues-in-use]

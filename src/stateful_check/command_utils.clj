@@ -45,22 +45,22 @@
   "Run the command's action. If the command has no action then an
   AssertionError will be thrown."
   [command args]
-  (if-let [real-command (:real/command command)]
+  (if-let [real-command (:command command)]
     (apply real-command args)
-    (throw (AssertionError. (str "No :real/command function found for " (:name command) " command")))))
+    (throw (AssertionError. (str "No :command function found for " (:name command) " command")))))
 
 (defn model-make-initial-state-and-results
   "Make the model initial state for a specification (and corresponding
   results set), taking into account whether or not it declares
   a :model/initial-state or :initial-state function, as well as
-  whether there is a :real/setup function.
+  whether there is a :setup function.
 
   Returns a tuple: [state results]"
   [spec]
   (let [initial-state-fn (or (:model/initial-state spec)
                              (:initial-state spec)
                              (constantly nil))]
-    (if (:real/setup spec)
+    (if (:setup spec)
       (let [setup-var (->RootVar "setup")]
         [(initial-state-fn setup-var) #{setup-var}])
       [(initial-state-fn) #{}])))
@@ -70,15 +70,15 @@
   "Make the real initial state (and corresponding results map) for a
   specification, taking into account whether or not it declares
   a :real/initial-state or :initial-state function, as well as whether
-  there is a :real/setup function. This will run the :real/setup
-  function, if it exists.
+  there is a :setup function. This will run the :setup function, if it
+  exists.
 
   Returns a tuple: [state results]"
   [spec]
   (let [state-fn (or (:real/initial-state spec)
                      (:initial-state spec)
                      (constantly nil))
-        setup-fn (:real/setup spec)
+        setup-fn (:setup spec)
         setup-value (if setup-fn (setup-fn))
         results (if setup-fn
                   {(->RootVar "setup") setup-value})]
@@ -126,7 +126,7 @@
 
 (defn run-spec-cleanup
   "Run the cleanup function for the specification, taking into account
-  whether or not the specification declares a :real/cleanup function."
+  whether or not the specification declares a :cleanup function."
   [spec state]
-  (if-let [f (:real/cleanup spec)]
+  (if-let [f (:cleanup spec)]
     (f state)))

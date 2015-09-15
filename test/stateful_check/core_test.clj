@@ -13,14 +13,14 @@
                                                                 (assoc state ticker 0))
                                             :real/next-state (fn [state _ ticker] 
                                                                (assoc state ticker 0))
-                                            :real/command ticker-init}
+                                            :command ticker-init}
 
                              :zero {:model/args (fn [state]
                                                   [(gen/elements (keys state))])
                                     :model/precondition (fn [state _] state)
                                     :next-state (fn [state [ticker] _]
                                                   (assoc state ticker 0))
-                                    :real/command ticker-zero}
+                                    :command ticker-zero}
                              
                              :take-ticket {:model/args (fn [state]
                                                          [(gen/elements (keys state))])
@@ -28,7 +28,7 @@
                                            :next-state (fn [state [ticker] _]
                                                          (assoc state
                                                                 ticker (inc (get state ticker))))
-                                           :real/command ticker-take
+                                           :command ticker-take
                                            :real/postcondition (fn [state _ [ticker] result]
                                                                  (= result (inc (get state ticker))))}}
                   :model/generate-command (fn [state]
@@ -69,7 +69,7 @@
                  (if state
                    (conj state [result #{}])
                    [[result #{}]]))
-   :real/command #(java.util.HashSet. [])})
+   :command #(java.util.HashSet. [])})
 
 (defn set-and-item [state]
   [(gen/elements (map first state))
@@ -89,17 +89,17 @@
 
 (def add-set-command
   (merge (set-update-op conj)
-         {:real/command #(.add %1 %2)}))
+         {:command #(.add %1 %2)}))
 
 (def remove-set-command
   (merge (set-update-op disj)
-         {:real/command #(.remove %1 %2)}))
+         {:command #(.remove %1 %2)}))
 
 (def contains?-set-command
   {:model/requires (fn [state]
                      (seq state))
    :model/args set-and-item
-   :real/command #(.contains %1 %2)
+   :command #(.contains %1 %2)
    :real/postcondition (fn [state _ [set item] result]
                          (= result (contains? (alist-get state set) item)))})
 
@@ -112,14 +112,14 @@
                  [(gen/elements (map first state))])
    :next-state (fn [state [set] _]
                  (alist-update state set (constantly #{})))
-   :real/command #(.clear %1)})
+   :command #(.clear %1)})
 
 (def empty?-set-command
   {:model/requires (fn [state]
                      (seq state))
    :model/args (fn [state]
                  [(gen/elements (map first state))])
-   :real/command #(.isEmpty %1)
+   :command #(.isEmpty %1)
    :real/postcondition (fn [state _ [set] result]
                          (= result (empty? (alist-get state set))))})
 
@@ -142,22 +142,22 @@
 
 (def add-all-set-command
   (merge (binary-set-command set/union)
-         {:real/command #(.addAll %1 %2)}))
+         {:command #(.addAll %1 %2)}))
 
 (def remove-all-set-command
   (merge (binary-set-command set/difference)
-         {:real/command #(.removeAll %1 %2)}))
+         {:command #(.removeAll %1 %2)}))
 
 (def retain-all-set-command
   (merge (binary-set-command set/intersection)
-         {:real/command #(.retainAll %1 %2)}))
+         {:command #(.retainAll %1 %2)}))
 
 
 (def small-set-spec {:commands {:add add-set-command
                                 :remove remove-set-command
                                 :contains? contains?-set-command}
                      :initial-state (fn [set] [[set #{}]])
-                     :real/setup #(java.util.HashSet.)})
+                     :setup #(java.util.HashSet.)})
 
 (deftest small-set-test
   (is (specification-correct? small-set-spec)))

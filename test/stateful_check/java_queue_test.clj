@@ -61,7 +61,7 @@
 (def new-shared-queue-command
   {:model/args (fn [_] [gen/nat])
    :model/precondition (fn [_ [size]] (pos? size))
-   :real/command #'new-shared-queue
+   :command #'new-shared-queue
    :next-state (fn [state [size] queue]
                  (assoc state queue
                         {:elements []
@@ -70,7 +70,7 @@
 (def new-array-queue-command
   {:model/args (fn [_] [gen/nat])
    :model/precondition (fn [_ [size]] (pos? size))
-   :real/command #'new-array-queue
+   :command #'new-array-queue
    :next-state (fn [state [size] queue]
                  (assoc state queue
                         {:elements []
@@ -84,7 +84,7 @@
    :model/precondition (fn [state [queue _]]
                          (let [{:keys [elements size]} (get state queue)]
                            (< (clojure.core/count elements) size)))
-   :real/command #'push
+   :command #'push
    :next-state (fn [state [queue val] _]
                  (update-in state [queue :elements] conj val))})
 
@@ -94,7 +94,7 @@
                  [(gen/elements (keys state))])
    :model/precondition (fn [state [queue]]
                          (seq (get-in state [queue :elements])))
-   :real/command #'peek
+   :command #'peek
    :real/postcondition (fn [state _ [queue] val]
                          (= val (first (get-in state [queue :elements]))))})
 
@@ -104,7 +104,7 @@
                  [(gen/elements (keys state))])
    :model/precondition (fn [state [queue]]
                          (seq (get-in state [queue :elements])))
-   :real/command #'pop
+   :command #'pop
    :next-state (fn [state [queue] _]
                  (update-in state [queue :elements] (comp vec next)))
    :real/postcondition (fn [state _ [queue] val]
@@ -114,7 +114,7 @@
   {:model/requires (complement nil?)
    :model/args (fn [state]
                  [(gen/elements (keys state))])
-   :real/command #'count
+   :command #'count
    :real/postcondition (fn [state _ [queue] val]
                          (= val (clojure.core/count (get-in state [queue :elements]))))})
 
@@ -128,7 +128,7 @@
               :peek #'peek-queue-command
               :pop #'pop-queue-command
               :count #'count-queue-command}
-   :real/setup #(reset! array clojure.lang.PersistentQueue/EMPTY)
+   :setup #(reset! array clojure.lang.PersistentQueue/EMPTY)
    :model/generate-command (fn [state]
                              (gen/frequency [[1 (gen/return :new)]
                                              [5 (gen/return :push)]

@@ -1,3 +1,20 @@
+* 0.4.0
+
+- *Breaking!* Postcondition evaluation is now deferred until after
+  command execution. This brings with it a whole host of breakages.
+
+  Most significantly: only the ~:real/command~ function may now
+  interact with the live system. Other ~:real/*~ functions may now be
+  executed numerous times and in unexpected ways, and thus must *not*
+  interact with the system under test in any way.
+
+- *Breaking!* Remove the specification ~:real/postcondition~ function
+
+- *Breaking!* Rename a few keys:
+  + ~:real/command~ => ~:command~
+  + ~:real/setup~ => ~:setup~
+  + ~:real/cleanup~ => ~:cleanup~
+
 * 0.3.1
 
 - ~:model/args~ now coerces the returned values into a generator.
