@@ -11,10 +11,15 @@ ways. Additionally, any command results provided to ~:model/X~
 functions will be provided as symbolic values (which, during a real
 execution, will be replaced by their concrete values).
 
-If a key is in the ~real~ namespace (ie. ~:real/command~) then it is
-only run during the /real execution/ phase. These functions may
-perform any side-effecting operation and may interact with the real
-system in any way.
+If a key is in the ~real~ namespace (ie. ~:real/postcondition~) then
+it is only run after the /real execution/. These functions may not
+interact with the system under test, as they may be run many times and
+in unexpected ways. The values provided to these functions will be the
+real results of execution in the system under test, however.
+
+The only functions that may interact with the system under test are
+the ~:setup~ and ~:cleanup~ function on a specification, and the
+~:command~ function on a command specification.
 
 * Commands
 
@@ -26,12 +31,12 @@ the abstract model and the real execution of the command.
 
 Commands have one required function:
 
-| Key             | Arguments                           |
-| ~:real/command~ | see optional ~:model/args~ function |
+| Key        | Arguments                           |
+| ~:command~ | see optional ~:model/args~ function |
 
-The ~:real/command~ key specifies what to do when executing this
-command on a real system. The arguments to this function are
-determined by the ~:model/args~ function (specified below).
+The ~:command~ key specifies what to do when executing this command on
+a real system. The arguments to this function are determined by the
+~:model/args~ function (specified below).
 
 ** Optional
 
@@ -137,17 +142,17 @@ not need to declare a ~:model/generate-command~ function. It can be
 helpful for changing the distribution of generated commands, or for
 increasing the efficiency of generation in some cases.
 
-| Key             | Arguments | Default value |
-| ~:real/setup~   | none      | ~nil~         |
-| ~:real/cleanup~ | ~[state]~ | ~nil~         |
+| Key        | Arguments | Default value |
+| ~:setup~   | none      | ~nil~         |
+| ~:cleanup~ | ~[state]~ | ~nil~         |
 
-The ~:real/setup~ function is run prior to the real execution phase.
-It should perform any one-time setup tasks which are necessary for
+The ~:setup~ function is run prior to the real execution phase. It
+should perform any one-time setup tasks which are necessary for
 repeatability.
 
-The ~:real/cleanup~ function is run immediately after the real
-execution phase. It is always run (irrespective of the pass/fail state
-of the test) and should clean up any necessary resources.
+The ~:cleanup~ function is run immediately after the real execution
+phase. It is always run (irrespective of the pass/fail state of the
+test) and should clean up any necessary resources.
 
 | Key                    | Arguments         | Default value      |
 | ~:model/initial-state~ | none or ~[setup]~ | ~(constantly nil)~ |
@@ -158,27 +163,16 @@ The ~:X/initial-state~ functions are used to seed the ~state~ value,
 which is then used extensively throughout command generation and
 execution.
 
-If a ~:real/setup~ function has been provided then the
+If a ~:setup~ function has been provided then the
 ~:model/initial-state~ function will be passed a symbolic value
 representing the result of the setup, and ~:real/initial-state~ will
 be provided with the concrete value of the setup. This is necessary
-for when ~:real/setup~ allocates resources which must be used during
-your tests, or closed in ~:real/cleanup~ (database handles, file
-handles, etc.).
+for when ~:setup~ allocates resources which must be used during your
+tests, or closed in ~:cleanup~ (database handles, file handles, etc.).
 
 As with the command's ~:next-state~ function, the ~:initial-state~
 function will be used as a fallback if the relevant function is not
 specified.
-
-| Key                   | Arguments | Default value       |
-| ~:real/postcondition~ | ~[state]~ | ~(constantly true)~ | 
-
-The ~:real/postcondition~ function verifies an assertion that must
-hold true for every instance of the state during a real execution. It
-is run on the result of the ~:real/initial-state~ execution, as well
-as on the result of each ~:real/next-state~ call. If this function
-returns a falsey value then command execution will stop and the
-current execution will be considered failed.
 
 * Symbolic values
 
