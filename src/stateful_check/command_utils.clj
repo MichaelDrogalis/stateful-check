@@ -49,8 +49,31 @@
     (apply real-command args)
     (throw (AssertionError. (str "No :real/command function found for " (:name command) " command")))))
 
+(defn model-make-initial-state-and-results
+  "Make the model initial state for a specification (and corresponding
+  results set), taking into account whether or not it declares
+  a :model/initial-state or :initial-state function, as well as
+  whether there is a :real/setup function.
+
+  Returns a tuple: [state results]"
+  [spec]
+  (let [initial-state-fn (or (:model/initial-state spec)
+                             (:initial-state spec)
+                             (constantly nil))]
+    (if (:real/setup spec)
+      (let [setup-var (->RootVar "setup")]
+        [(initial-state-fn setup-var) #{setup-var}])
+      [(initial-state-fn) #{}])))
+
+
 (defn real-make-initial-state-and-results
-  "Blah blah blah"
+  "Make the real initial state (and corresponding results map) for a
+  specification, taking into account whether or not it declares
+  a :real/initial-state or :initial-state function, as well as whether
+  there is a :real/setup function. This will run the :real/setup
+  function, if it exists.
+
+  Returns a tuple: [state results]"
   [spec]
   (let [state-fn (or (:real/initial-state spec)
                      (:initial-state spec)

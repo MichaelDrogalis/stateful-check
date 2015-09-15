@@ -97,33 +97,24 @@
   "Verify whether a given list of commands is valid (preconditions all
   return true, symbolic vars are all valid, etc.)."
   [spec command-list]
-  (let [setup-var (->RootVar setup-name)]
-    (v/valid? command-list
-              (if (:real/setup spec)
-                #{setup-var}
-                #{})
-              (let [initial-state-fn (or (:model/initial-state spec)
-                                         (:initial-state spec)
-                                         (constantly nil))]
-                (if (:real/setup spec)
-                  (initial-state-fn setup-var)
-                  (initial-state-fn))))))
+  (let [[state results] (u/model-make-initial-state-and-results spec)]
+    (v/valid? command-list results state)))
 
 (defn generate-valid-commands
   "Generate a set of valid commands from a specification"
   [spec]
-  (->> (let [initial-state-fn (or (:model/initial-state spec)
-                                  (:initial-state spec)
-                                  (constantly nil))]
-         (if (:real/setup spec)
-           (initial-state-fn (->RootVar setup-name))
-           (initial-state-fn)))
+  (->> (u/model-make-initial-state-and-results spec)
+       first ;; we only want the state part
        (generate-commands spec)
        (gen/such-that (partial valid-commands? spec))))
 
-(defn make-failure-exception [results]
-  (ex-info ""
-           {:results results}))
+(defn make-failure-exception
+  "Make an exception which indicates the failure of a generated test
+  case. This is necessary to pass more information up to the function
+  which prints the command lists."
+  [initial results]
+  (ex-info "Generative test failed. See :results for more information."
+           {:initial initial,:results results}))
 
 (defn spec->property
   "Turn a specification into a testable property."
@@ -132,50 +123,44 @@
    (for-all [commands (generate-valid-commands spec)]
      (loop [tries (or tries 1)]
        (if (pos? tries)
-         (let [state-stuff (u/real-make-initial-state-and-results spec)
-               results (r/run-commands spec state-stuff commands)]
-           (if (r/passed? spec state-stuff results)
+         (let [initial (u/real-make-initial-state-and-results spec)
+               results (r/run-commands spec initial commands)]
+           (if (r/passed? spec initial results)
              (recur (dec tries))
-             (throw (make-failure-exception results))))
+             (throw (make-failure-exception initial results))))
          true)))))
 
-(defn format-command [[sym-var [{name :name} _ args] :as cmd]]
+(defn format-command
+  "Turn a command entry into a representative string"
+  [[sym-var [{name :name} _ args] :as cmd]]
   (str (pr-str sym-var) " = " (pr-str (cons name args))))
 
 (defn print-command-results
   "Print out the results of a `r/run-commands` call. No commands are
   actually run, as the argument to this function contains the results
   for each individual command."
-  ([results] (print-command-results results false))
-  ([results stacktraces?]
+  ([{:keys [results initial]}] (print-command-results results false))
+  ([{:keys [results initial]} stacktraces?]
    (try
-     (doseq [[pre [type :as step]] (partition 2 1 results)]
-       ;; get each state, plus the state before it (we can ignore the
-       ;; first state because it's definitely not a terminal state
-       ;; (:pass/:fail) and hence must have a following state which we
-       ;; will see
-       (case type
-         :postcondition-check
-         (let [[_ cmd _ _ _ str-result] step]
-           (println "  " (format-command cmd) "\t=>" str-result))
-         :fail
-         (let [[_ ex] step
-               [pre-type cmd] pre
-               location (case pre-type
-                          :run-command "executing command"
-                          :postcondition-check "checking postcondition"
-                          :next-state "making next state"
-                          :next-command "checking spec postcondition")]
-           (if-let [ex ^Throwable ex]
-             (let [show-command? (and cmd (= :run-command pre-type))]
-               (if show-command?
-                 (println "  " (format-command cmd) "\t=!!>" ex))
-               (println "Exception thrown while" location
-                        (if show-command? "" (str "- " ex)))
-               (if stacktraces?
-                 (.printStackTrace ex (java.io.PrintWriter. ^java.io.Writer *out*))))
-             (println "Error while" location)))
-         nil))
+     (reduce (fn [[state prev-state] [step & args]]
+               (case step
+                 :next-state
+                 (let [[[sym-var [command args raw-args] :as current] command-list results result] args]
+                   [(u/real-make-next-state command state args result) state])
+
+                 :postcondition-check
+                 (let [[[_ [command args _] :as cmd] _ _ result str-result] args]
+                   (println "  " (format-command cmd) "\t=>" str-result)
+                   (if (u/check-postcondition command prev-state state args result)
+                     [state]
+                     (reduced (println "!! postcondition failed !!"))))
+
+                 :fail
+                 (let [[exception] args]
+                   (reduced (println "!! exception thrown:" exception "!!")))
+
+                 [state prev-state]))
+             [(first initial)] results)
      (catch Throwable ex
        (println "Unexpected exception thrown in test runner -" ex)
        (.printStackTrace ex (java.io.PrintWriter. ^java.io.Writer *out*))))))
@@ -189,12 +174,11 @@
   live system."
   [spec results {:keys [first-case? stacktraces?]}]
   (when-not (true? (:result results))
-    (println (-> results :result ex-data :results))
     (when first-case?
       (println "First failing test case:")
-      (print-command-results (-> results :result ex-data :results) stacktraces?)
+      (print-command-results (-> results :result ex-data) stacktraces?)
       (println "Shrunk:"))
-    (print-command-results (-> results :shrunk :result ex-data :results) stacktraces?)
+    (print-command-results (-> results :shrunk :result ex-data) stacktraces?)
     (println "Seed: " (:seed results))
     (println "Visited: " (-> results :shrunk :total-nodes-visited))))
 

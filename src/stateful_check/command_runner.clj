@@ -18,18 +18,16 @@
 (defmethod step-command-runner :next-command
   [spec state _ command-list results]
   [state (if (seq command-list)
-           (try (if (u/check-spec-postcondition spec state)
-                  (let [[sym-var [command & raw-args]] (first command-list)
-                        args (walk/prewalk (fn [value]
-                                             (if (satisfies? SymbolicValue value)
-                                               (get-real-value value results)
-                                               value))
-                                           raw-args)]
-                    [:run-command
-                     [sym-var [command args raw-args]]
-                     (next command-list)
-                     results])
-                  [:fail])
+           (try (let [[sym-var [command & raw-args]] (first command-list)
+                      args (walk/prewalk (fn [value]
+                                           (if (satisfies? SymbolicValue value)
+                                             (get-real-value value results)
+                                             value))
+                                         raw-args)]
+                  [:run-command
+                   [sym-var [command args raw-args]]
+                   (next command-list)
+                   results])
                 (catch Throwable ex
                   [:fail ex]))
            [:done])])

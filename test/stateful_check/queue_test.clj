@@ -84,10 +84,12 @@
               :peek #'peek-queue-command
               :pop #'pop-queue-command
               :count #'count-queue-command}
-   :initial-state (fn [queue] {:queue queue, :elements [1]})
+   :initial-state (fn [queue] {:queue queue, :elements []})
    :real/setup (fn []
                  (swap! queues-in-use inc)
-                 (new-queue))
+                 (let [q (new-queue)]
+                   (push-queue q 1)
+                   q))
    :real/cleanup (fn [state]
                    (swap! queues-in-use dec))})
 
