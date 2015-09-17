@@ -85,16 +85,6 @@
   results/state. Returns a lazy seq of states from the command
   runner."
   [spec [state results] command-list]
-  ;; (let [[state results] (u/real-make-initial-state-and-results spec)]
-  ;;   (try
-  ;;     (->> [state [:next-command command-list results]]
-  ;;          (iterate (fn [[state args]]
-  ;;                     (apply step-command-runner spec state args)))
-  ;;          (take-while (complement nil?))
-  ;;          (map second)
-  ;;          doall)
-  ;;     (catch Exception ex
-  ;;       (println ex))))
   (try
     (->> [state [:next-command command-list results]]
          (iterate (fn [[state args]]
