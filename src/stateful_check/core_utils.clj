@@ -11,21 +11,19 @@
              [generator-utils :refer [gen-do]]
              [symbolic-values :refer [->RootVar]]]))
 
-(def setup-name "setup")
-
 (defmacro assert-val
   ([val]
    (when *assert*
      `(let [val# ~val]
         (if (some? val#)
           val#
-          (throw (new AssertionError (str "Assert failed: " (pr-str '~val))))))))
+          (throw (AssertionError. (str "Assert failed: " (pr-str '~val))))))))
   ([val message]
    (when *assert*
      `(let [val# ~val]
         (if (some? val#)
           val#
-          (throw (new AssertionError (str "Assert failed: " ~message))))))))
+          (throw (AssertionError. (str "Assert failed: " ~message))))))))
 
 (defn generate-command-object
   "Generate the object for a command. This means first generating a
@@ -157,7 +155,7 @@
 
                  :fail
                  (let [[exception] args]
-                   (reduced (println "!! exception thrown:" exception "!!")))
+                   (println "!! exception thrown:" exception "!!"))
 
                  [state prev-state]))
              [(first initial)] results)
